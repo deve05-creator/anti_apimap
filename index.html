@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>루트파인더 (RouteFinder) - OpenStreetMap 거리 측정 및 경로 탐색</title>
+  <meta name="description" content="OpenStreetMap Nominatim API 기반의 스마트한 장소 검색 및 거리 측정 서비스. 출발지와 도착지를 입력하여 정확한 도로 거리와 직선 거리를 실시간으로 확인하세요." />
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📍</text></svg>">
+
+  <!-- Google Fonts: Inter & Pretendard -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Leaflet CSS for OpenStreetMap display -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+  <!-- App Stylesheet -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">RouteFinder</h1>
+          <p class="brand-subtitle">OpenStreetMap Nominatim 거리측정기</p>
+        </div>
+      </div>
+      <div class="header-badges">
+        <span class="badge badge-osm">
+          <span class="pulse-dot"></span>
+          OSM Nominatim API
+        </span>
+      </div>
+    </header>
+
+    <!-- Main Content Area: Search Sidebar & Map -->
+    <main class="main-layout">
+      <!-- Search & Results Panel -->
+      <section class="panel search-panel" aria-label="거리 측정 패널">
+        <div class="panel-header">
+          <h2 class="panel-title">경로 및 거리 측정</h2>
+          <p class="panel-desc">출발지와 도착지를 검색하여 실제 도로 및 직선 거리를 측정하세요.</p>
+        </div>
+
+        <form id="route-form" class="route-form" onsubmit="return false;">
+          <!-- Departure Input Box -->
+          <div class="input-card start-card">
+            <div class="input-indicator">
+              <span class="indicator-icon start-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                  <circle cx="12" cy="12" r="8"/>
+                </svg>
+              </span>
+              <span class="indicator-label">출발지</span>
+            </div>
+            <div class="input-field-wrapper">
+              <input
+                type="text"
+                id="origin-input"
+                class="location-input"
+                placeholder="예: 서울역, 강남역, 여의도한강공원"
+                autocomplete="off"
+                required
+              />
+              <button type="button" class="btn-clear" id="btn-clear-origin" title="입력 지우기" aria-label="출발지 지우기">✕</button>
+              <div id="origin-spinner" class="input-spinner" style="display: none;"></div>
+            </div>
+            <!-- Nominatim Autocomplete Dropdown -->
+            <ul id="origin-suggestions" class="suggestions-list" role="listbox" aria-label="출발지 추천 검색어"></ul>
+            <div id="origin-selected-info" class="selected-badge" style="display: none;">
+              <span class="badge-text" id="origin-display-name"></span>
+            </div>
+          </div>
+
+          <!-- Swap Button -->
+          <div class="swap-divider">
+            <button type="button" id="btn-swap" class="btn-swap" title="출발지와 도착지 위치 바꾸기" aria-label="출발지와 도착지 바꾸기">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M7 16V4m0 0L3 8m4-4l4 4m6 4v12m0 0l4-4m-4 4l-4-4"/>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Destination Input Box -->
+          <div class="input-card dest-card">
+            <div class="input-indicator">
+              <span class="indicator-icon dest-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                </svg>
+              </span>
+              <span class="indicator-label">도착지</span>
+            </div>
+            <div class="input-field-wrapper">
+              <input
+                type="text"
+                id="dest-input"
+                class="location-input"
+                placeholder="예: 부산역, 인천국제공항, 판교역"
+                autocomplete="off"
+                required
+              />
+              <button type="button" class="btn-clear" id="btn-clear-dest" title="입력 지우기" aria-label="도착지 지우기">✕</button>
+              <div id="dest-spinner" class="input-spinner" style="display: none;"></div>
+            </div>
+            <!-- Nominatim Autocomplete Dropdown -->
+            <ul id="dest-suggestions" class="suggestions-list" role="listbox" aria-label="도착지 추천 검색어"></ul>
+            <div id="dest-selected-info" class="selected-badge" style="display: none;">
+              <span class="badge-text" id="dest-display-name"></span>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="form-actions">
+            <button type="button" id="btn-calculate" class="btn btn-primary">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <span>거리 계산하기</span>
+            </button>
+            <button type="button" id="btn-reset" class="btn btn-secondary" title="초기화">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                <path d="M3 3v5h5"/>
+              </svg>
+            </button>
+          </div>
+        </form>
+
+        <!-- Quick Demo Recommendations -->
+        <div class="quick-examples">
+          <span class="quick-label">추천 빠른 검색:</span>
+          <div class="quick-tags">
+            <button type="button" class="quick-tag" data-start="서울역" data-dest="부산역">서울역 ➔ 부산역</button>
+            <button type="button" class="quick-tag" data-start="강남역" data-dest="인천국제공항">강남 ➔ 인천공항</button>
+            <button type="button" class="quick-tag" data-start="광화문" data-dest="해운대해수욕장">광화문 ➔ 해운대</button>
+          </div>
+        </div>
+
+        <!-- Result Section (Shown when distance is calculated) -->
+        <div id="result-container" class="result-container" style="display: none;">
+          <div class="result-header">
+            <h3 class="result-title">거리 측정 결과</h3>
+            <span class="result-status-tag" id="route-type-tag">실시간 경로 분석</span>
+          </div>
+
+          <!-- Total Distance Highlight Card -->
+          <div class="distance-hero-card">
+            <div class="distance-label">총 거리 (도로 주행)</div>
+            <div class="distance-value-group">
+              <span class="distance-number" id="road-distance-val">0.0</span>
+              <span class="distance-unit">km</span>
+            </div>
+            <div class="duration-estimate" id="duration-estimate-box">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+              <span id="estimated-time-text">예상 소요시간 계산 중...</span>
+            </div>
+          </div>
+
+          <!-- Distance Metrics Breakdown Grid -->
+          <div class="metrics-grid">
+            <div class="metric-item">
+              <span class="metric-icon">🚗</span>
+              <div class="metric-meta">
+                <span class="metric-name">실제 도로 거리</span>
+                <span class="metric-val" id="metric-road-km">-</span>
+              </div>
+            </div>
+            <div class="metric-item">
+              <span class="metric-icon">📏</span>
+              <div class="metric-meta">
+                <span class="metric-name">직선 거리 (Haversine)</span>
+                <span class="metric-val" id="metric-direct-km">-</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Route Location Summary -->
+          <div class="route-summary-list">
+            <div class="summary-node">
+              <div class="node-bullet node-start"></div>
+              <div class="node-info">
+                <span class="node-type">출발지</span>
+                <span class="node-address" id="summary-origin-addr">-</span>
+                <span class="node-coords" id="summary-origin-coords">-</span>
+              </div>
+            </div>
+            <div class="summary-line"></div>
+            <div class="summary-node">
+              <div class="node-bullet node-dest"></div>
+              <div class="node-info">
+                <span class="node-type">도착지</span>
+                <span class="node-address" id="summary-dest-addr">-</span>
+                <span class="node-coords" id="summary-dest-coords">-</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- [Requirement 7]: 지도에서 보기 Link Menu -->
+          <div class="view-map-section">
+            <a
+              id="btn-view-external-map"
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn-view-map"
+              title="OpenStreetMap 공식 지도에서 전체 경로 보기"
+            >
+              <div class="view-map-content">
+                <div class="view-map-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
+                    <line x1="8" y1="2" x2="8" y2="18"></line>
+                    <line x1="16" y1="6" x2="16" y2="22"></line>
+                  </svg>
+                </div>
+                <div class="view-map-text">
+                  <span class="view-map-title">지도에서 보기</span>
+                  <span class="view-map-sub">OpenStreetMap 전체 화면 길찾기로 이동</span>
+                </div>
+              </div>
+              <div class="view-map-arrow">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                  <polyline points="15 3 21 3 21 9"></polyline>
+                  <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        <!-- System Message / Toast -->
+        <div id="toast-message" class="toast-box" style="display: none;" role="alert"></div>
+      </section>
+
+      <!-- Map Display Panel -->
+      <section class="panel map-panel" aria-label="대화형 지도">
+        <div id="map" class="map-view"></div>
+        <div class="map-overlay-badge">
+          <span>© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> 기여자</span>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>
+        Powered by <strong>OpenStreetMap Nominatim</strong> & <strong>OSRM Route Engine</strong> | Vercel Ready Web App
+      </p>
+    </footer>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Application JS -->
+  <script src="js/app.js"></script>
+</body>
+</html>

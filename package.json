@@ -1,0 +1,22 @@
+{
+  "name": "osm-routefinder",
+  "version": "1.0.0",
+  "description": "OpenStreetMap Nominatim 거리측정 및 경로 탐색 웹 애플리케이션",
+  "scripts": {
+    "start": "serve .",
+    "dev": "serve ."
+  },
+  "keywords": [
+    "openstreetmap",
+    "nominatim",
+    "leaflet",
+    "distance-calculator",
+    "osrm",
+    "vercel"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.2.4"
+  }
+}
